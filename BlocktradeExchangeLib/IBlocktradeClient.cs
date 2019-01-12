@@ -3,15 +3,26 @@ using System.Collections.Generic;
 
 namespace BlocktradeExchangeLib
 {
-    public interface IBlockTradeClient
+    public interface IBlocktradeClient
     {
-        List<BlockTradeAsset> GetTradingAssets();
+        List<BlocktradeAsset> GetTradingAssets();
         string GetTradingAssetsRaw();
 
         string GetTradingPairsRaw();
-        List<BlockTradeTradingPair> GetTradingPairs();
+        List<BlocktradeTradingPair> GetTradingPairs();
 
         string GetOrderBookRaw(int tradingPairId);
-        BlockTradeOrderBook GetOrderBook(int tradingPairId);
+        BlocktradeOrderBook GetOrderBook(int tradingPairId);
+
+        string GetUserRaw(BlocktradeApiKey apiKey);
+        BlocktradeUser GetUser(BlocktradeApiKey apiKey);
+
+        string GetUserPortfoliosRaw(BlocktradeApiKey apiKey);
+        List<BlocktradePortfolio> GetUserPortfolios(BlocktradeApiKey apiKey);
+
+        string CancelActiveRaw(BlocktradeApiKey apiKey);
+        BlocktradeMessage CancelActive(BlocktradeApiKey apiKey);
+
+        string GetUserOrdersRaw(BlocktradeApiKey apiKey);
     }
 }

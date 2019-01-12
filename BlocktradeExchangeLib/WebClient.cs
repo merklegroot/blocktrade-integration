@@ -19,5 +19,18 @@ namespace BlocktradeExchangeLib
                 return reader.ReadToEnd();
             }
         }
+
+        public string HttpPost(string url)
+        {
+            var request = (HttpWebRequest)WebRequest.Create(url);
+            request.Method = "POST";
+
+            using (var response = request.GetResponse())
+            using (var responseStream = response.GetResponseStream())
+            using (var reader = new StreamReader(responseStream))
+            {
+                return reader.ReadToEnd();
+            }
+        }
     }
 }

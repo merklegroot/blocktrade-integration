@@ -3,12 +3,12 @@ using System.Collections.Generic;
 
 namespace BlocktradeExchangeLib.Models
 {
-    public class BlockTradeOrderBook
+    public class BlocktradeOrderBook
     {
         [JsonProperty("bids")]
-        public List<BlockTradeOrder> Bids { get; set; }
+        public List<BlocktradeOrder> Bids { get; set; }
 
         [JsonProperty("asks")]
-        public List<BlockTradeOrder> Asks { get; set; }        
+        public List<BlocktradeOrder> Asks { get; set; }        
     }
 }

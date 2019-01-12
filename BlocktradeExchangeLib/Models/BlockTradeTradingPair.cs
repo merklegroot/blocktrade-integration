@@ -2,7 +2,7 @@
 
 namespace BlocktradeExchangeLib.Models
 {
-    public class BlockTradeTradingPair
+    public class BlocktradeTradingPair
     {
         // "id": 12,
         [JsonProperty("id")]
