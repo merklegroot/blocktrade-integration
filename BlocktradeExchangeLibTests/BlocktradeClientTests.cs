@@ -155,7 +155,7 @@ namespace BlocktradeExchangeLibTests
             const string BaseSymbol = "ETH";
             const string QuoteSymbol = "BTC";
 
-            var results = _blocktradeClient.PlaceLimitBidRaw(apiKey, BaseSymbol, QuoteSymbol, Quantity, Price);
+            var results = _blocktradeClient.PlaceLimitBid(apiKey, BaseSymbol, QuoteSymbol, Quantity, Price);
             results.Dump();
         }
 
