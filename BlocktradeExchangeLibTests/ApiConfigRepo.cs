@@ -1,11 +1,13 @@
 ﻿using BlocktradeExchangeLib;
 using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace BlocktradeExchangeLibTests
 {
+    /// <summary>
+    /// This is just how the local tests were retrieving the api key.
+    /// Please store your api key securely.
+    /// </summary>
     public class ApiConfigRepo
     {
         public BlocktradeApiKey GetKey()

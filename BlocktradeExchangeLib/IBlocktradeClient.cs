@@ -24,5 +24,59 @@ namespace BlocktradeExchangeLib
         BlocktradeMessage CancelActive(BlocktradeApiKey apiKey);
 
         string GetUserOrdersRaw(BlocktradeApiKey apiKey);
+        BlocktradeGetUserOrdersResponse GetUserOrders(BlocktradeApiKey apiKey);
+
+        string CancelOrderRaw(BlocktradeApiKey apiKey, long orderId);
+        BlocktradeMessage CancelOrder(BlocktradeApiKey apiKey, long orderId);
+
+        string PlaceOrderRaw(
+            BlocktradeApiKey apiKey,
+            int portfolioId,
+            string direction,
+            string type,
+            int tradingPairId,
+            decimal amount,
+            decimal price,
+            string timeInForce,
+            string stopPrice);
+
+        BlocktradePlaceOrderResponse PlaceOrder(
+            BlocktradeApiKey apiKey,
+            int portfolioId,
+            string direction,
+            string type,
+            int tradingPairId,
+            decimal amount,
+            decimal price,
+            string timeInForce,
+            string stopPrice);
+
+        string PlaceLimitBidRaw(
+            BlocktradeApiKey apiKey,
+            string symbol,
+            string baseSymbol,
+            decimal quantity,
+            decimal price);
+
+        BlocktradePlaceOrderResponse PlaceLimitBid(
+            BlocktradeApiKey apiKey,
+            string symbol,
+            string baseSymbol,
+            decimal quantity,
+            decimal price);
+
+        string PlaceLimitAskRaw(
+            BlocktradeApiKey apiKey,
+            string symbol,
+            string baseSymbol,
+            decimal quantity,
+            decimal price);
+
+        BlocktradePlaceOrderResponse PlaceLimitAsk(
+            BlocktradeApiKey apiKey,
+            string symbol,
+            string baseSymbol,
+            decimal quantity,
+            decimal price);
     }
 }

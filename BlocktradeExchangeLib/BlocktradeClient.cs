@@ -1,8 +1,11 @@
 ﻿using BlocktradeExchangeLib.Models;
+using BlocktradeExchangeLib.Requests;
+using BlocktradeExchangeLib.Util;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -12,6 +15,7 @@ namespace BlocktradeExchangeLib
     // https://trade.blocktrade.com/api_documentation
     public class BlocktradeClient : IBlocktradeClient
     {
+        private const string ApiRoot = "https://trade.blocktrade.com/api/v1/";
         private readonly IWebClient _webClient;
 
         public BlocktradeClient(IWebClient webUtil = null)
@@ -117,11 +121,147 @@ namespace BlocktradeExchangeLib
                 : new BlocktradeGetUserOrdersResponse();
         }
 
+        public string CancelOrderRaw(BlocktradeApiKey apiKey, long orderId)
+        {
+            var url = $"{ApiRoot}orders/{orderId}/cancel";
+            return AuthenticatedPost(apiKey, url);
+        }
+
+        public BlocktradeMessage CancelOrder(BlocktradeApiKey apiKey, long orderId)
+        {
+            var contents = CancelOrderRaw(apiKey, orderId);
+
+            return !string.IsNullOrWhiteSpace(contents)
+                ? JsonConvert.DeserializeObject<BlocktradeMessage>(contents)
+                : new BlocktradeMessage();
+        }
+
+        public string PlaceOrderRaw(
+            BlocktradeApiKey apiKey,
+            int portfolioId,
+            string direction,
+            string type,
+            int tradingPairId,
+            decimal amount,
+            decimal price,
+            string timeInForce,
+            string stopPrice)
+        {
+            var url = $"{ApiRoot}orders";
+
+            var requestModel = new PlaceOrderRequest
+            {
+                PortfolioId = portfolioId,
+                Direction = direction,
+                Type = type,
+                TradingPairId = tradingPairId,
+                Amount = amount.ToString(),
+                Price = price.ToString(),
+                TimeInForce = timeInForce,
+                StopPrice = stopPrice                
+            };
+
+            var json = JsonConvert.SerializeObject(requestModel);
+            return AuthenticatedPost(apiKey, url, json);
+        }
+
+        public BlocktradePlaceOrderResponse PlaceOrder(
+            BlocktradeApiKey apiKey,
+            int portfolioId,
+            string direction,
+            string type,
+            int tradingPairId,
+            decimal amount,
+            decimal price,
+            string timeInForce,
+            string stopPrice)
+        {
+            var response = PlaceOrderRaw(apiKey, portfolioId, direction, type, tradingPairId, amount, price, timeInForce, stopPrice);
+
+            return !string.IsNullOrWhiteSpace(response)
+                ? JsonConvert.DeserializeObject<BlocktradePlaceOrderResponse>(response)
+                : new BlocktradePlaceOrderResponse();
+        }
+
+        public string PlaceLimitBidRaw(
+            BlocktradeApiKey apiKey,
+            string baseSymbol,
+            string quoteSymbol,
+            decimal quantity,
+            decimal price)
+        {
+            return PlaceLimitRaw(apiKey, true, baseSymbol, quoteSymbol, quantity, price);
+        }
+
+        public BlocktradePlaceOrderResponse PlaceLimitBid(
+            BlocktradeApiKey apiKey,
+            string baseSymbol,
+            string quoteSymbol,
+            decimal quantity,
+            decimal price)
+        {
+            var response = PlaceLimitBidRaw(apiKey, baseSymbol, quoteSymbol, quantity, price);
+
+            return !string.IsNullOrWhiteSpace(response)
+                ? JsonConvert.DeserializeObject<BlocktradePlaceOrderResponse>(response)
+                : new BlocktradePlaceOrderResponse();
+        }
+
+        public string PlaceLimitAskRaw(
+            BlocktradeApiKey apiKey,
+            string baseSymbol,
+            string quoteSymbol,
+            decimal quantity,
+            decimal price)
+        {
+            return PlaceLimitRaw(apiKey, false, baseSymbol, quoteSymbol, quantity, price);
+        }
+
+        public BlocktradePlaceOrderResponse PlaceLimitAsk(
+            BlocktradeApiKey apiKey,
+            string baseSymbol,
+            string quoteSymbol,
+            decimal quantity,
+            decimal price)
+        {
+            var response = PlaceLimitAskRaw(apiKey, baseSymbol, quoteSymbol, quantity, price);
+
+            return !string.IsNullOrWhiteSpace(response)
+                ? JsonConvert.DeserializeObject<BlocktradePlaceOrderResponse>(response)
+                : new BlocktradePlaceOrderResponse();
+        }
+
+        private string PlaceLimitRaw(
+            BlocktradeApiKey apiKey,
+            bool isBid,
+            string baseSymbol,
+            string quoteSymbol,
+            decimal quantity,
+            decimal price)
+        {
+            const int PortfolioId = 1;
+            const string Type = BlocktradeOrderType.Limit;
+            const string TimeInForce = BlocktradeTimeInForce.GoodUntilCancelled;
+            var direction = isBid ? BlocktradeDirection.Buy : BlocktradeDirection.Sell;
+
+            var tradingAssets = GetTradingAssets();
+
+            var baseAsset = tradingAssets.Single(queryTradingAsset => string.Equals(queryTradingAsset.IsoCode, baseSymbol, StringComparison.InvariantCultureIgnoreCase));
+            var quoteAsset = tradingAssets.Single(queryTradingAsset => string.Equals(queryTradingAsset.IsoCode, quoteSymbol, StringComparison.InvariantCultureIgnoreCase));
+
+            var tradingPairs = GetTradingPairs();
+            var matchingTradingPair = tradingPairs.Single(queryTradingPair => queryTradingPair.BaseAssetId == baseAsset.Id && queryTradingPair.QuoteAssetId == quoteAsset.Id);
+
+            return PlaceOrderRaw(apiKey, PortfolioId, direction, Type, matchingTradingPair.Id, quantity, price, TimeInForce, null);
+        }
+
+        /// <summary>
+        /// Generates a 13-digit unix timestamp to be used as the nonce.
+        /// </summary>
         private static long GenerateNonce()
         {
             var currentTime = DateTime.UtcNow;
             return (long)(currentTime.Subtract(new DateTime(1970, 1, 1)))
-                //.TotalSeconds;
                 .TotalMilliseconds;
         }
 
@@ -135,21 +275,14 @@ namespace BlocktradeExchangeLib
             var messageBytes = encoding.GetBytes(message);
             var hashedMessage = hmac.ComputeHash(messageBytes);
 
-            return ByteArrayToString(hashedMessage).ToUpper();
+            return BinaryUtil.HexEncode(hashedMessage).ToUpper();
         }
 
-        private static string ByteArrayToString(byte[] ba)
-        {
-            var hex = new StringBuilder(ba.Length * 2);
-            foreach (byte b in ba) { hex.AppendFormat("{0:x2}", b); }
-
-            return hex.ToString();
-        }
-
-        private string AuthenticatedPost(BlocktradeApiKey apiKey, string url)
+        private string AuthenticatedPost(BlocktradeApiKey apiKey, string url, string body = null)
         {
             var nonce = GenerateNonce();
             var message = $"{apiKey.PublicKey}.{nonce}.";
+            if (!string.IsNullOrWhiteSpace(body)) { message += body; }
             var signature = Sign(apiKey.PrivateKey, message);
 
             var request = (HttpWebRequest)WebRequest.Create(url);
@@ -159,6 +292,17 @@ namespace BlocktradeExchangeLib
             request.Headers.Add("X-Api-Key", apiKey.PublicKey);
             request.Headers.Add("X-nonce", nonce.ToString());
             request.Headers.Add("X-Signature", signature);
+
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                var encodedBody = Encoding.UTF8.GetBytes(body);
+
+                request.ContentLength = encodedBody.Length;
+                using (var requestStream = request.GetRequestStream())
+                {
+                    requestStream.Write(encodedBody, 0, encodedBody.Length);
+                }
+            }
 
             using (var response = request.GetResponse())
             using (var responseStream = response.GetResponseStream())
@@ -187,6 +331,6 @@ namespace BlocktradeExchangeLib
             {
                 return reader.ReadToEnd();
             }
-        }
+        }        
     }
 }
